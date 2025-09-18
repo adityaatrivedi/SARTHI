@@ -8,6 +8,7 @@ from plotly.subplots import make_subplots
 import json
 from typing import Dict, List, Any, Optional, Tuple
 import time
+from visualize import build_interactive_train_schedule, build_time_station_line_chart
 
 class ControllerInterface:
     """
@@ -168,6 +169,11 @@ class ControllerInterface:
         
         # Bottom row - Detailed views
         tab1, tab2, tab3, tab4 = st.tabs(["📊 Performance", "🚂 Train Status", "🛤️ Infrastructure", "📈 Analytics"])
+        st.markdown("---")
+        st.subheader("🗺️ Interactive Train Schedule")
+        self._display_interactive_schedule()
+        st.subheader("📈 Time vs Station Line View")
+        self._display_time_station_chart()
         
         with tab1:
             self._display_performance_tab()
@@ -566,6 +572,34 @@ class ControllerInterface:
             )
             
             st.plotly_chart(fig, use_container_width=True)
+
+    def _display_interactive_schedule(self):
+        """Render interactive Plotly train schedule with hover details."""
+        st.caption("Hover over segments to see details. Select a log file to visualize.")
+        default_log = "simulation_log_ai_optimized.csv"
+        log_file = st.text_input("Simulation log CSV path", value=default_log)
+        stations_csv = st.text_input("Stations CSV path", value="stations.csv")
+        start_time = st.text_input("Simulation start time (ISO)", value=datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat())
+        if st.button("Render Schedule"):
+            try:
+                fig = build_interactive_train_schedule(log_file, stations_csv, start_time)
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception as e:
+                st.error(f"Failed to build schedule: {e}")
+
+    def _display_time_station_chart(self):
+        """Render time vs station line chart with precise ticks."""
+        st.caption("Line chart with 10-min major and 2-min minor ticks; stations on Y-axis.")
+        default_log = "simulation_log_ai_optimized.csv"
+        log_file = st.text_input("Line chart - Simulation log CSV path", value=default_log, key="line_log")
+        stations_csv = st.text_input("Line chart - Stations CSV path", value="stations.csv", key="line_stations")
+        start_time = st.text_input("Line chart - Simulation start time (ISO)", value=datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat(), key="line_start")
+        if st.button("Render Line Chart"):
+            try:
+                fig = build_time_station_line_chart(log_file, stations_csv, start_time)
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception as e:
+                st.error(f"Failed to build line chart: {e}")
     
     # Helper methods for data retrieval and actions
     def _get_system_status(self):
